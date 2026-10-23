@@ -116,7 +116,7 @@ html, body {
 }
 
 .hud-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #ffffff;
@@ -152,21 +152,27 @@ html, body {
 }
 
 .altitude-module {
-  width: 140px;
+  width: 130px;
+}
+
+.keycard-module {
+  width: 125px;
+  border-left: 1px solid var(--border-cyan-dim);
+  padding-left: 14px;
 }
 
 .gravity-module {
-  width: 130px;
+  width: 120px;
   border-left: 1px solid var(--border-cyan-dim);
   padding-left: 14px;
 }
 
 .brake-module {
-  width: 130px;
+  width: 125px;
 }
 
 .oxygen-module {
-  width: 130px;
+  width: 125px;
 }
 
 .module-label-row {
@@ -191,6 +197,16 @@ html, body {
   font-size: 12px;
   font-weight: 700;
   color: var(--border-cyan);
+}
+
+.key-val {
+  color: #ffaa00;
+  font-size: 11px;
+}
+
+.key-sub-row {
+  display: flex;
+  justify-content: space-between;
 }
 
 .gravity-val {
@@ -307,6 +323,16 @@ html, body {
   box-shadow: 0 0 5px #ff5533;
 }
 
+.panel-dot.key-dot {
+  background: #ffaa00;
+  box-shadow: 0 0 5px #ffaa00;
+}
+
+.panel-dot.key-dot.key-acquired {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+}
+
 .hud-btn-restart {
   background: rgba(14, 34, 60, 0.85);
   border: 1px solid var(--border-cyan-dim);
@@ -325,6 +351,46 @@ html, body {
   background: var(--border-cyan);
   color: #030812;
   border-color: var(--border-cyan);
+}
+
+/* Central Holographic Announcement Banner */
+.hud-announcement-container {
+  position: absolute;
+  top: 90px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  animation: banner-pop 0.3s ease-out;
+}
+
+.hud-announcement-card {
+  background: rgba(6, 26, 48, 0.92);
+  border: 1px solid var(--border-cyan);
+  border-radius: 6px;
+  padding: 8px 24px;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.hud-announcement-card.banner-warning {
+  border-color: #ff3344;
+  box-shadow: 0 0 20px rgba(255, 51, 68, 0.6);
+}
+
+.hud-announcement-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+
+@keyframes banner-pop {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* ==========================================================================

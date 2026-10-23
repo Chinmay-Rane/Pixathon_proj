@@ -1,14 +1,16 @@
 /**
  * GAME SCENE - VERTICAL SPACESHIP SHAFT SIMULATION
  * 
- * Phase 1 Execution:
- * - Continuous 360° Station Rotation (A / D latches continuous spin until counter-key or Space is pressed)
- * - Persistent Astronaut EVA Booster Drift (Arrow keys latch continuous drift direction until counter-key or Space)
+ * Phase 2 Complete Execution:
+ * - Multi-Room Station Labyrinth with Stage Progression (Levels 1, 2, and 3)
+ * - Movable Cargo Crates ('C') subject to 360° station rotation and astronaut pushes
+ * - Security Keycards ('K') & Locked Blast Doors ('X') dividing level stages
+ * - Decompression Hull Breaches ('B') with radial vacuum suction that can be plugged with crates
+ * - Wall-Mounted Venting Plasma Flame Conduits ('H') with timed warning/firing cycles
+ * - Life-Support Oxygen Canisters ('O')
+ * - Continuous 360° Station Rotation (A / D) & Persistent EVA Booster Drift (Arrows)
+ * - Centered camera follow at (0, 0) through all 360° rotations
  * - Ultra-slow peaceful microgravity descent
- * - 76px enlarged maze shaft with authentic metallic spaceship bulkheads & active RCS pods
- * - Authentic 76px astronaut with warm glow aura & fading motion trail
- * - Layered radial gradient planet with glowing atmosphere
- * - Cartoon diamond stars wall-hit stun preserved
  */
 
 import Phaser from 'phaser';
@@ -31,17 +33,18 @@ export class GameScene extends Phaser.Scene {
     this.gameState = new GameState();
 
     // 360° Continuous Station Rotation state
-    this.stationAngle = 0;              // Current camera / station angle in radians
-    this.stationCurrentSpin = 0;        // Current interpolated angular velocity
-    this.stationSpinTarget = 0;         // Target angular velocity (-spinRate, 0, +spinRate)
+    this.stationAngle = 0;
+    this.stationCurrentSpin = 0;
+    this.stationSpinTarget = 0;
 
-    // Persistent Astronaut EVA Booster Drift (persists until counter-key is pressed)
-    this.driftVx = 0;                   // Persistent horizontal cruise velocity
-    this.driftVy = 0;                   // Persistent vertical cruise velocity
+    // Persistent Astronaut EVA Booster Drift
+    this.driftVx = 0;
+    this.driftVy = 0;
 
-    // Visual horizontal sway
-    this.currentSwayX = 0;
-    this.targetSwayX = 0;
+    // Phase 2 Inventory & Stage Progression
+    this.hasKey = false;
+    this.unlockedDoors = new Set();
+    this.sealedBreaches = new Set();
 
     // Cartoon wall-hit stun state
     this.isStunned = false;
@@ -56,7 +59,7 @@ export class GameScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    // Center the 1064px vertical shaft horizontally in the 1280px world
+    // Center the shaft horizontally in the world
     this.shaftOriginX = Math.max(0, (width - this.level.pixelWidth) / 2);
     this.shaftOriginY = 60;
 
@@ -84,22 +87,25 @@ export class GameScene extends Phaser.Scene {
     // 6. Astronaut with Soft Glow Aura & Fading Motion Trail
     this.spawnAstronaut();
 
-    // 7. Cartoon Diamond Stars for Wall-Hit Stun
+    // 7. Phase 2 Entities: Crates, Keycards, Blast Doors, Breaches, Fire Conduits, O2 Tanks
+    this.spawnInteractiveEntities();
+
+    // 8. Cartoon Diamond Stars for Wall-Hit Stun
     this.createCartoonDiamondStars();
 
-    // 8. Smooth Centered Camera Follow (centers directly on astronaut through all 360° rotations)
+    // 9. Smooth Centered Camera Follow (centers directly on astronaut through all 360° rotations)
     this.cameras.main.startFollow(this.astronaut, true, 0.08, 0.08, 0, 0);
 
-    // 9. Particle Systems for Lateral Steering RCS Thrusters & Retro-Brakes
-    this.createThrusterEmitters();
+    // 10. Particle Systems (Thrusters, Retro-Brakes, Fire Jets, Suction Vapor)
+    this.createParticleSystems();
 
-    // 10. Bind Controls (Continuous 360° Station Rotation & Persistent EVA Drift)
+    // 11. Bind Controls
     this.bindControls();
 
-    // 11. Bind GameState Events (Win / Lose)
+    // 12. Bind GameState Events (Win / Lose)
     this.bindGameState();
 
-    // 12. Mount DOM HUD Telemetry Overlay
+    // 13. Mount DOM HUD Telemetry Overlay
     const hudContainer = document.getElementById('hud-container');
     if (hudContainer) {
       hudContainer.innerHTML = '';
@@ -108,6 +114,7 @@ export class GameScene extends Phaser.Scene {
       });
       this.hud.setLevelName(this.level.name);
       this.hud.updateOxygen(this.gameState.oxygen, CONFIG.oxygen.max);
+      this.hud.updateKeycardStatus(false);
     }
   }
 
@@ -148,7 +155,7 @@ export class GameScene extends Phaser.Scene {
     this.shipGraphics = this.add.graphics();
     this.shipGraphics.setDepth(2);
 
-    // 1. Shaft Interior Conduit Background (pressurized dark metallic atmosphere)
+    // 1. Shaft Interior Conduit Background
     this.shipGraphics.fillStyle(0x08101a, 0.96);
     this.shipGraphics.fillRect(ox, oy, pw, ph);
 
@@ -172,37 +179,24 @@ export class GameScene extends Phaser.Scene {
     }
 
     // 2. Exterior Spaceship Hull Armor Plating (Left & Right margins)
-    // Left Hull
     this.shipGraphics.fillStyle(0x101a28, 1);
     this.shipGraphics.fillRect(ox - 88, oy, 88, ph);
+    this.shipGraphics.fillRect(ox + pw, oy, 88, ph);
 
-    // Left Hull Bevel & Structural Girder Trusses
     this.shipGraphics.lineStyle(2, 0x24364c, 1);
     this.shipGraphics.strokeRect(ox - 88, oy, 88, ph);
+    this.shipGraphics.strokeRect(ox + pw, oy, 88, ph);
 
+    // Trusses
     this.shipGraphics.lineStyle(1.5, 0x344c68, 0.6);
     for (let y = oy; y < oy + ph; y += ts * 2) {
       this.shipGraphics.strokeRect(ox - 80, y, 72, ts * 2 - 8);
-      // Cross truss
       this.shipGraphics.moveTo(ox - 80, y);
       this.shipGraphics.lineTo(ox - 8, y + ts * 2 - 8);
       this.shipGraphics.moveTo(ox - 8, y);
       this.shipGraphics.lineTo(ox - 80, y + ts * 2 - 8);
-    }
-    this.shipGraphics.strokePath();
 
-    // Right Hull
-    this.shipGraphics.fillStyle(0x101a28, 1);
-    this.shipGraphics.fillRect(ox + pw, oy, 88, ph);
-
-    // Right Hull Bevel & Structural Girder Trusses
-    this.shipGraphics.lineStyle(2, 0x24364c, 1);
-    this.shipGraphics.strokeRect(ox + pw, oy, 88, ph);
-
-    this.shipGraphics.lineStyle(1.5, 0x344c68, 0.6);
-    for (let y = oy; y < oy + ph; y += ts * 2) {
       this.shipGraphics.strokeRect(ox + pw + 8, y, 72, ts * 2 - 8);
-      // Cross truss
       this.shipGraphics.moveTo(ox + pw + 8, y);
       this.shipGraphics.lineTo(ox + pw + 80, y + ts * 2 - 8);
       this.shipGraphics.moveTo(ox + pw + 80, y);
@@ -210,18 +204,16 @@ export class GameScene extends Phaser.Scene {
     }
     this.shipGraphics.strokePath();
 
-    // 3. Mount Exterior RCS Attitude Thruster Pods along hull flanks
+    // 3. Mount Exterior RCS Attitude Thruster Pods
     this.rcsPodsLeft = [];
     this.rcsPodsRight = [];
 
     for (let y = oy + ts * 2; y < oy + ph; y += ts * 6) {
-      // Left hull RCS pod (pointing left into space)
       const podL = this.add.image(ox - 14, y, 'rcs_pod');
       podL.setDepth(4);
       podL.setFlipX(true);
       this.rcsPodsLeft.push(podL);
 
-      // Right hull RCS pod (pointing right into space)
       const podR = this.add.image(ox + pw + 14, y, 'rcs_pod');
       podR.setDepth(4);
       this.rcsPodsRight.push(podR);
@@ -229,8 +221,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Builds solid Matter.js static colliders with authentic metallic bulkhead styling:
-   * 3D bevels, brushed titanium surfaces, rivet studs, and industrial hazard stripes.
+   * Builds solid Matter.js static colliders with authentic metallic bulkhead styling.
    */
   buildPhysicsBulkheads(worldWidth, worldHeight) {
     const ox = this.shaftOriginX;
@@ -242,39 +233,31 @@ export class GameScene extends Phaser.Scene {
     this.bulkheadGraphics.setDepth(3);
     this.wallBodies = [];
 
-    // Render Interior Bulkheads
     for (const wall of this.level.mergedWalls) {
       const worldX = ox + wall.x;
       const worldY = oy + wall.y;
       const left = worldX - wall.width / 2;
       const top = worldY - wall.height / 2;
 
-      // 1. Soft Ambient Drop Shadow under the bulkhead
+      // Soft Ambient Drop Shadow
       this.bulkheadGraphics.fillStyle(0x000000, 0.55);
       this.bulkheadGraphics.fillRect(left + 4, top + 6, wall.width, wall.height);
 
-      // 2. Metallic Titanium Bulkhead Surface
+      // Metallic Titanium Surface
       this.bulkheadGraphics.fillStyle(0x162434, 1);
       this.bulkheadGraphics.fillRect(left, top, wall.width, wall.height);
 
-      // 3. 3D Bevel Highlights & Shadows
-      // Top specular highlight
+      // 3D Bevel Highlights & Shadows
       this.bulkheadGraphics.fillStyle(0x486686, 1);
       this.bulkheadGraphics.fillRect(left, top, wall.width, 3);
-
-      // Left specular highlight
       this.bulkheadGraphics.fillStyle(0x385270, 1);
       this.bulkheadGraphics.fillRect(left, top, 3, wall.height);
-
-      // Bottom ambient shadow
       this.bulkheadGraphics.fillStyle(0x080e16, 1);
       this.bulkheadGraphics.fillRect(left, top + wall.height - 3, wall.width, 3);
-
-      // Right ambient shadow
       this.bulkheadGraphics.fillStyle(0x0a121c, 1);
       this.bulkheadGraphics.fillRect(left + wall.width - 3, top, 3, wall.height);
 
-      // 4. Recessed Inner Plate Border
+      // Recessed Inner Plate Border
       if (wall.width > 24 && wall.height > 24) {
         this.bulkheadGraphics.lineStyle(1.5, 0x0c141e, 0.9);
         this.bulkheadGraphics.strokeRect(left + 6, top + 6, wall.width - 12, wall.height - 12);
@@ -282,7 +265,6 @@ export class GameScene extends Phaser.Scene {
         this.bulkheadGraphics.lineStyle(1, 0x2c425c, 0.6);
         this.bulkheadGraphics.strokeRect(left + 7, top + 7, wall.width - 14, wall.height - 14);
 
-        // Rivet studs in corners of this bulkhead section
         const drawRivet = (rx, ry) => {
           this.bulkheadGraphics.fillStyle(0x080e16, 1);
           this.bulkheadGraphics.fillCircle(rx, ry, 2.5);
@@ -295,7 +277,7 @@ export class GameScene extends Phaser.Scene {
         drawRivet(left + wall.width - 12, top + wall.height - 12);
       }
 
-      // 5. Industrial Hazard Warning Stripes on exposed ledges
+      // Industrial Hazard Stripes on ledges
       if (wall.width >= 48) {
         const stripeY = top;
         const stripeH = 8;
@@ -314,7 +296,6 @@ export class GameScene extends Phaser.Scene {
         }
       }
 
-      // Matter.js static physics body
       const body = this.matter.add.rectangle(worldX, worldY, wall.width, wall.height, {
         isStatic: true,
         restitution: CONFIG.astronaut.restitution,
@@ -325,34 +306,26 @@ export class GameScene extends Phaser.Scene {
       this.wallBodies.push(body);
     }
 
-    // Heavy Outer Containment Bulkheads (160px thick)
+    // Heavy Outer Containment Bulkheads
     const thickness = 160;
-
-    // Left outer barrier
     this.matter.add.rectangle(ox - thickness / 2, oy + ph / 2, thickness, ph + 300, {
       isStatic: true,
       restitution: CONFIG.astronaut.restitution,
       friction: CONFIG.astronaut.friction,
       label: 'wall',
     });
-
-    // Right outer barrier
     this.matter.add.rectangle(ox + pw + thickness / 2, oy + ph / 2, thickness, ph + 300, {
       isStatic: true,
       restitution: CONFIG.astronaut.restitution,
       friction: CONFIG.astronaut.friction,
       label: 'wall',
     });
-
-    // Ceiling barrier
     this.matter.add.rectangle(ox + pw / 2, oy - thickness / 2, pw + 300, thickness, {
       isStatic: true,
       restitution: CONFIG.astronaut.restitution,
       friction: CONFIG.astronaut.friction,
       label: 'wall',
     });
-
-    // Floor barrier
     this.matter.add.rectangle(ox + pw / 2, oy + ph + thickness / 2 + 10, pw + 300, thickness, {
       isStatic: true,
       restitution: CONFIG.astronaut.restitution,
@@ -362,20 +335,162 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Spawns Phase 2 Interactive Entities:
+   * Crates ('C'), Keycards ('K'), Blast Doors ('X'), Breaches ('B'), Fire Conduits ('H'), O2 Tanks ('O').
+   */
+  spawnInteractiveEntities() {
+    const ox = this.shaftOriginX;
+    const oy = this.shaftOriginY;
+
+    // 1. Movable Cargo Crates ('C')
+    this.crateBodies = [];
+    for (const c of this.level.crates) {
+      const wx = ox + c.x;
+      const wy = oy + c.y;
+      const crateSize = CONFIG.items.crateSize;
+
+      const crate = this.matter.add.image(wx, wy, 'crate', null, {
+        shape: { type: 'rectangle', width: crateSize, height: crateSize },
+        mass: CONFIG.items.crateMass,
+        friction: CONFIG.items.crateFriction,
+        frictionAir: 0.015,
+        restitution: CONFIG.items.crateRestitution,
+        label: 'crate',
+      });
+      crate.setDepth(6);
+      this.crateBodies.push(crate);
+    }
+
+    // 2. Security Keycards ('K')
+    this.keycardSprites = [];
+    for (const k of this.level.keycards) {
+      const wx = ox + k.x;
+      const wy = oy + k.y;
+
+      const keycard = this.add.image(wx, wy, 'keycard');
+      keycard.setDepth(7);
+
+      this.tweens.add({
+        targets: keycard,
+        y: wy - 6,
+        rotation: 0.12,
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
+      this.keycardSprites.push({ sprite: keycard, x: wx, y: wy, collected: false });
+    }
+
+    // 3. Locked Blast Doors ('X')
+    this.doorEntities = [];
+    for (const d of this.level.doors) {
+      const wx = ox + d.x;
+      const wy = oy + d.y;
+
+      const doorBody = this.matter.add.image(wx, wy, 'blast_door', null, {
+        isStatic: true,
+        label: 'door',
+      });
+      doorBody.setDepth(5);
+
+      this.doorEntities.push({
+        image: doorBody,
+        x: wx,
+        y: wy,
+        unlocked: false,
+      });
+    }
+
+    // 4. Decompression Hull Breaches ('B')
+    this.breachEntities = [];
+    for (const b of this.level.breaches) {
+      const wx = ox + b.x;
+      const wy = oy + b.y;
+
+      const breach = this.add.image(wx, wy, 'breach_vortex');
+      breach.setDepth(4);
+
+      this.tweens.add({
+        targets: breach,
+        rotation: Math.PI * 2,
+        scale: { from: 0.95, to: 1.08 },
+        duration: 1800,
+        repeat: -1,
+        ease: 'Linear',
+      });
+
+      this.breachEntities.push({
+        sprite: breach,
+        x: wx,
+        y: wy,
+        sealed: false,
+      });
+    }
+
+    // 5. Wall-Mounted Fire Conduits ('H')
+    this.fireConduits = [];
+    for (const f of this.level.fireHazards) {
+      const wx = ox + f.x;
+      const wy = oy + f.y;
+
+      const nozzle = this.add.image(wx, wy, 'fire_nozzle');
+      nozzle.setDepth(4);
+
+      // Flame graphics overlay
+      const flameGfx = this.add.graphics();
+      flameGfx.setDepth(6);
+
+      this.fireConduits.push({
+        nozzle,
+        flameGfx,
+        x: wx,
+        y: wy,
+        timer: Phaser.Math.FloatBetween(0, 3.0),
+        state: 'cooldown', // 'cooldown', 'warning', 'active'
+      });
+    }
+
+    // 6. Life-Support Oxygen Canisters ('O')
+    this.oxygenCanisters = [];
+    for (const o of this.level.oxygenTanks) {
+      const wx = ox + o.x;
+      const wy = oy + o.y;
+
+      const canister = this.add.image(wx, wy, 'oxygen_canister');
+      canister.setDepth(7);
+
+      this.tweens.add({
+        targets: canister,
+        y: wy - 5,
+        duration: 800,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+
+      this.oxygenCanisters.push({
+        sprite: canister,
+        x: wx,
+        y: wy,
+        collected: false,
+      });
+    }
+  }
+
+  /**
    * Sets up the layered planet body and additive atmospheric corona.
-   * Dynamic scaling, brightening, and elevation are updated in updatePlanetVisuals().
    */
   createLayeredPlanet(worldWidth) {
     this.exitY = this.shaftOriginY + this.level.exit.y;
     const initialPlanetY = this.exitY + CONFIG.planet.startDistanceBelowExit;
 
-    // 1. Additive Atmospheric Corona Haze
     this.planetCorona = this.add.image(worldWidth / 2, initialPlanetY - 70, 'planet_corona_haze');
     this.planetCorona.setDepth(1);
     this.planetCorona.setBlendMode(Phaser.BlendModes.ADD);
     this.planetCorona.setAlpha(CONFIG.planet.atmosphereGlowBaseAlpha);
 
-    // 2. High-Resolution Layered Planet Sphere Body
     this.planetBody = this.add.image(worldWidth / 2, initialPlanetY, 'planet_layered_body');
     this.planetBody.setDepth(1);
     this.planetBody.setAlpha(CONFIG.planet.baseAlpha);
@@ -389,12 +504,10 @@ export class GameScene extends Phaser.Scene {
     const pCfg = CONFIG.planet;
     const clampRatio = Math.max(0, Math.min(1, depthRatio));
 
-    // 1. Planet Scale Growth (expands toward player)
     const currentScale = Phaser.Math.Linear(pCfg.baseScale, pCfg.maxScale, clampRatio);
     this.planetBody.setScale(currentScale);
     this.planetCorona.setScale(currentScale * 1.15);
 
-    // 2. Brightness / Opacity Escalation
     const currentAlpha = Phaser.Math.Linear(pCfg.baseAlpha, pCfg.maxAlpha, clampRatio);
     this.planetBody.setAlpha(currentAlpha);
 
@@ -405,7 +518,6 @@ export class GameScene extends Phaser.Scene {
     );
     this.planetCorona.setAlpha(currentCoronaAlpha);
 
-    // 3. Planet Elevation (rises closer to the landing pad as depth increases)
     const currentDistBelowExit = Phaser.Math.Linear(
       pCfg.startDistanceBelowExit,
       pCfg.endDistanceBelowExit,
@@ -453,7 +565,6 @@ export class GameScene extends Phaser.Scene {
 
     const startX = this.shaftOriginX + startPos.x;
 
-    // Fading Motion Trail Ghosts (queue of 6 ghosts trailing behind)
     this.motionTrailGhosts = [];
     const trailLen = CONFIG.astronaut.trailLength;
     for (let i = 0; i < trailLen; i++) {
@@ -463,7 +574,6 @@ export class GameScene extends Phaser.Scene {
       this.motionTrailGhosts.push(ghost);
     }
 
-    // Physical Astronaut Matter.js body
     this.astronaut = this.matter.add.image(startX, this.startY, 'astronaut', null, {
       shape: {
         type: 'circle',
@@ -502,9 +612,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Creates particle emitters for lateral steering thrusters & retro-brakes.
+   * Creates particle systems for thrusters, retro-brakes, fire plumes, and suction vapor.
    */
-  createThrusterEmitters() {
+  createParticleSystems() {
     this.thrusterParticles = this.add.particles(0, 0, 'thruster_particle', {
       speed: { min: 30, max: 95 },
       scale: { start: 0.75, end: 0 },
@@ -523,14 +633,19 @@ export class GameScene extends Phaser.Scene {
       emitting: false,
     });
     this.brakeParticles.setDepth(12);
+
+    this.suctionParticles = this.add.particles(0, 0, 'thruster_particle', {
+      speed: { min: 60, max: 140 },
+      scale: { start: 0.45, end: 0 },
+      alpha: { start: 0.75, end: 0 },
+      lifespan: 220,
+      emitting: false,
+    });
+    this.suctionParticles.setDepth(8);
   }
 
   /**
-   * Sets up keyboard controls:
-   * - A / D: Continuous 360° station rotation (latches spin until opposite key or Space)
-   * - Arrow Keys: Persistent Astronaut EVA drift (latches drift until opposite arrow or Space)
-   * - Space: Retro-Brake (stops both station spin and astronaut drift)
-   * - R: Instant restart
+   * Sets up keyboard controls.
    */
   bindControls() {
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -539,53 +654,46 @@ export class GameScene extends Phaser.Scene {
     this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.keyR = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 
-    // 1. Station 360° Continuous Rotation Keys (A and D only)
+    // Station 360° Continuous Rotation (A and D only)
     this.input.keyboard.on('keydown-A', () => {
-      // Rotate station Counter-Clockwise (CCW) continuously
       this.stationSpinTarget = -CONFIG.maze.stationSpinRate;
     });
 
     this.input.keyboard.on('keydown-D', () => {
-      // Rotate station Clockwise (CW) continuously
       this.stationSpinTarget = CONFIG.maze.stationSpinRate;
     });
 
-    // 2. Astronaut Persistent EVA Thrusters (Arrow keys)
+    // Astronaut Persistent EVA Thrusters (Arrow keys)
     const boosterSpeed = CONFIG.astronaut.boosterSpeed;
 
     this.input.keyboard.on('keydown-UP', () => {
-      // Continuous upward drift until Down or Space is pressed
       this.driftVy = -boosterSpeed;
       this.thrusterParticles.emitParticleAt(this.astronaut.x, this.astronaut.y + 20, 3);
     });
 
     this.input.keyboard.on('keydown-DOWN', () => {
-      // Continuous downward drift until Up or Space is pressed
       this.driftVy = boosterSpeed;
       this.thrusterParticles.emitParticleAt(this.astronaut.x, this.astronaut.y - 20, 3);
     });
 
     this.input.keyboard.on('keydown-LEFT', () => {
-      // Continuous leftward drift until Right or Space is pressed
       this.driftVx = -boosterSpeed;
       this.thrusterParticles.emitParticleAt(this.astronaut.x + 20, this.astronaut.y, 3);
     });
 
     this.input.keyboard.on('keydown-RIGHT', () => {
-      // Continuous rightward drift until Left or Space is pressed
       this.driftVx = boosterSpeed;
       this.thrusterParticles.emitParticleAt(this.astronaut.x - 20, this.astronaut.y, 3);
     });
 
-    // 3. Retro-Brake Counter-Arrest (Spacebar)
-    // Stops both station spin and astronaut drift
+    // Retro-Brake Counter-Arrest (Spacebar)
     this.input.keyboard.on('keydown-SPACE', () => {
       this.stationSpinTarget = 0;
       this.driftVx = 0;
       this.driftVy = 0;
     });
 
-    // 4. Quick Restart Key
+    // Quick Restart Key
     this.input.keyboard.on('keydown-R', () => {
       this.restartLevel();
     });
@@ -618,8 +726,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Handles collision with a wall bulkhead:
-   * Triggers the cartoon dizzy stun with orbiting diamond stars.
+   * Handles collision with a wall bulkhead.
    */
   handleWallCollision() {
     const vx = this.astronaut.body.velocity.x;
@@ -633,20 +740,19 @@ export class GameScene extends Phaser.Scene {
       this.isStunned = true;
       this.stunRemainingMs = CONFIG.astronaut.stunDurationMs;
       this.lastStunTime = now;
+      this.driftVx = 0;
+      this.driftVy = 0;
 
-      // Soften momentum upon impact and gently rebound
       this.matter.body.setVelocity(this.astronaut.body, {
         x: vx * 0.30,
         y: vy * 0.30,
       });
 
-      // Show diamond stars
       this.diamondStars.forEach(s => {
         s.sprite.setVisible(true);
         s.sprite.setAlpha(1);
       });
 
-      // Gentle cartoon bonk micro-shake & sparks
       this.cameras.main.shake(50, 0.002);
       this.thrusterParticles.emitParticleAt(this.astronaut.x, this.astronaut.y, 4);
     }
@@ -708,68 +814,312 @@ export class GameScene extends Phaser.Scene {
       this.driftVy = 0;
     }
 
-    // 2. Continuous 360° Station Rotation (smooth interpolation)
+    // 2. Continuous 360° Station Rotation
     this.update360StationRotation(deltaSec);
 
-    // 3. Update GameState (computes depth gravity & manages brake charge)
+    // 3. Update GameState
     this.gameState.update(deltaSec, this.astronaut.y, this.startY, this.exitY, brakeHeld);
 
-    // 4. Update Layered Planet (grows, brightens, and rises closer)
+    // 4. Update Layered Planet
     this.updatePlanetVisuals(this.gameState.depthProgress);
 
-    // 5. Planet Gravity: Ultra-slow, peaceful downward drift
+    // 5. Planet Gravity on Astronaut
     let currentVx = this.astronaut.body.velocity.x;
     let currentVy = this.astronaut.body.velocity.y;
 
     const gravityDelta = this.gameState.currentGravity * deltaSec;
-    currentVy += gravityDelta;
 
-    // 6. Persistent EVA Thrusters (smoothly steer towards persistent drift vector)
-    currentVx = Phaser.Math.Linear(currentVx, this.driftVx, 0.15);
-    currentVy = Phaser.Math.Linear(currentVy, this.driftVy + gravityDelta, 0.15);
-
-    // 7. Retro-Brake Pulse (softly arrests drift and rotation)
-    if (this.gameState.isBraking) {
-      const brakePower = CONFIG.maze.brakeStrength * deltaSec;
-      currentVy = Math.max(-10, currentVy - brakePower);
-      currentVx *= 0.85;
-
-      this.brakeParticles.emitParticleAt(this.astronaut.x, this.astronaut.y + 14, 1);
-      this.cameras.main.shake(20, 0.0008);
+    // 6. Persistent EVA Thrusters & Gentle Microgravity
+    currentVx = Phaser.Math.Linear(currentVx, this.driftVx, 0.12);
+    if (this.driftVy !== 0) {
+      currentVy = Phaser.Math.Linear(currentVy, this.driftVy, 0.12);
+    } else {
+      currentVy += gravityDelta;
     }
 
-    // 8. Strict Velocity Clamps for Ultra-Slow Peaceful Descent
+    // 7. Retro-Brake Pulse (Smooth Zero-G Hover)
+    if (this.gameState.isBraking) {
+      currentVx = Phaser.Math.Linear(currentVx, 0, 0.22);
+      currentVy = Phaser.Math.Linear(currentVy, 0, 0.22);
+
+      this.brakeParticles.emitParticleAt(this.astronaut.x, this.astronaut.y + 14, 1);
+      this.cameras.main.shake(20, 0.0005);
+    }
+
+    // 8. Strict Velocity Clamps
     const maxVy = CONFIG.astronaut.maxTerminalVelocity;
     const maxVx = CONFIG.astronaut.maxLateralVelocity;
-    currentVy = Math.min(maxVy, currentVy);
+    currentVy = Math.max(-maxVy, Math.min(maxVy, currentVy));
     currentVx = Math.max(-maxVx, Math.min(maxVx, currentVx));
 
-    // Apply velocities to Matter body
     this.matter.body.setVelocity(this.astronaut.body, {
       x: currentVx,
       y: currentVy,
     });
 
-    // 9. Hard Physical Boundary Containment
+    // 9. Update Moving Crates Physics (slide with depth gravity)
+    this.updateCratesPhysics(gravityDelta);
+
+    // 10. Phase 2 Interactions: Keycards, Doors, Breaches, Fire Conduits, O2 Canisters
+    this.updateKeycardCollection();
+    this.updateBlastDoors();
+    this.updateDecompressionBreaches(deltaSec);
+    this.updateFireConduits(deltaSec);
+    this.updateOxygenCanisters();
+
+    // 11. Hard Physical Boundary Containment
     this.enforceShaftBoundaries();
 
-    // 10. Update Fading Motion Trail
+    // 12. Update Fading Motion Trail
     this.updateMotionTrail();
 
-    // 11. Update Cartoon Stun Animation & Orbiting Diamond Stars
+    // 13. Update Cartoon Stun Animation & Orbiting Diamond Stars
     this.updateCartoonStunAnimation(time, delta);
 
-    // 12. Update Astronaut Visual Rotation (if not currently stunned)
+    // 14. Update Astronaut Visual Rotation
     if (!this.isStunned) {
       this.updateAstronautVisuals(currentVx, currentVy);
     }
 
-    // 13. Update Streaming Starfield
+    // 15. Update Streaming Starfield
     this.updateStreamingStarfield(currentVy, deltaSec);
 
-    // 14. Update HUD Timer
+    // 16. Update HUD Timer
     if (this.hud) {
       this.hud.updateTimer(this.gameState.elapsedTime);
+    }
+  }
+
+  /**
+   * Updates sliding crates physics according to depth gravity.
+   */
+  updateCratesPhysics(gravityDelta) {
+    for (const crate of this.crateBodies) {
+      if (!crate.body) continue;
+      const cvy = crate.body.velocity.y + gravityDelta * 0.9;
+      this.matter.body.setVelocity(crate.body, {
+        x: crate.body.velocity.x * 0.98,
+        y: Math.min(CONFIG.astronaut.maxTerminalVelocity, cvy),
+      });
+    }
+  }
+
+  /**
+   * Checks for Keycard collection on touch.
+   */
+  updateKeycardCollection() {
+    for (const k of this.keycardSprites) {
+      if (k.collected) continue;
+      const dist = Math.hypot(this.astronaut.x - k.x, this.astronaut.y - k.y);
+
+      if (dist < CONFIG.items.keyPickupRadius) {
+        k.collected = true;
+        this.hasKey = true;
+
+        this.tweens.add({
+          targets: k.sprite,
+          scale: 1.8,
+          alpha: 0,
+          duration: 350,
+          onComplete: () => k.sprite.destroy(),
+        });
+
+        this.thrusterParticles.emitParticleAt(k.x, k.y, 8);
+        if (this.hud) {
+          this.hud.updateKeycardStatus(true);
+          this.hud.showAnnouncement('SECURITY KEY ACQUIRED // DOORS UNLOCKED');
+        }
+      }
+    }
+  }
+
+  /**
+   * Unlocks Blast Doors when the astronaut approaches with the Security Keycard.
+   */
+  updateBlastDoors() {
+    for (const d of this.doorEntities) {
+      if (d.unlocked) continue;
+      const dist = Math.hypot(this.astronaut.x - d.x, this.astronaut.y - d.y);
+
+      if (this.hasKey && dist < CONFIG.items.doorUnlockDistance) {
+        d.unlocked = true;
+
+        // Slide open door animation
+        this.tweens.add({
+          targets: d.image,
+          scaleX: 0.05,
+          alpha: 0.2,
+          duration: 500,
+          onComplete: () => {
+            // Remove physical collider from Matter world
+            this.matter.world.remove(d.image.body);
+            d.image.setVisible(false);
+          },
+        });
+
+        this.thrusterParticles.emitParticleAt(d.x, d.y, 6);
+        if (this.hud) {
+          this.hud.showAnnouncement('STAGE ACCESS GRANTED');
+        }
+      }
+    }
+  }
+
+  /**
+   * Updates Decompression Hull Breaches:
+   * Applies inward suction force to astronaut and crates unless plugged by a cargo crate!
+   */
+  updateDecompressionBreaches(deltaSec) {
+    const suctionR = CONFIG.items.breachSuctionRadius;
+    const ejectR = CONFIG.items.breachEjectionRadius;
+
+    for (const b of this.breachEntities) {
+      // Check if any crate is plugging the breach
+      let isPlugged = false;
+      for (const crate of this.crateBodies) {
+        if (!crate.body) continue;
+        const cDist = Math.hypot(crate.x - b.x, crate.y - b.y);
+        if (cDist < 42) {
+          isPlugged = true;
+          break;
+        }
+      }
+
+      if (isPlugged) {
+        b.sealed = true;
+        b.sprite.setTint(0x44ffaa);
+        continue;
+      } else {
+        b.sealed = false;
+        b.sprite.clearTint();
+      }
+
+      // Check suction on astronaut
+      const aDist = Math.hypot(this.astronaut.x - b.x, this.astronaut.y - b.y);
+      if (aDist < suctionR) {
+        // Emit vortex particles flowing into the breach
+        this.suctionParticles.emitParticleAt(
+          this.astronaut.x + Phaser.Math.Between(-15, 15),
+          this.astronaut.y + Phaser.Math.Between(-15, 15),
+          1
+        );
+
+        // Calculate inward pull vector
+        const angle = Math.atan2(b.y - this.astronaut.y, b.x - this.astronaut.x);
+        const strength = ((suctionR - aDist) / suctionR) * CONFIG.items.breachSuctionForce * deltaSec;
+
+        const vx = this.astronaut.body.velocity.x + Math.cos(angle) * strength;
+        const vy = this.astronaut.body.velocity.y + Math.sin(angle) * strength;
+        this.matter.body.setVelocity(this.astronaut.body, { x: vx, y: vy });
+
+        // Decompression loss check
+        if (aDist < ejectR) {
+          this.gameState.triggerGameOver({
+            reason: 'HULL DECOMPRESSION: EJECTED INTO DEEP SPACE',
+            elapsedTime: this.gameState.elapsedTime,
+            depthProgress: this.gameState.depthProgress,
+          });
+        }
+      }
+
+      // Check suction on nearby crates
+      for (const crate of this.crateBodies) {
+        if (!crate.body) continue;
+        const cDist = Math.hypot(crate.x - b.x, crate.y - b.y);
+        if (cDist < suctionR) {
+          const angle = Math.atan2(b.y - crate.y, b.x - crate.x);
+          const strength = ((suctionR - cDist) / suctionR) * 60 * deltaSec;
+          this.matter.body.setVelocity(crate.body, {
+            x: crate.body.velocity.x + Math.cos(angle) * strength,
+            y: crate.body.velocity.y + Math.sin(angle) * strength,
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Updates wall-mounted fire hazard conduits:
+   * Timed cycles of safe cooldown, warning sparks, and blazing flame jets.
+   */
+  updateFireConduits(deltaSec) {
+    const fCfg = CONFIG.items;
+    const cycleTotal = fCfg.fireCooldownDuration + fCfg.fireWarningDuration + fCfg.fireActiveDuration;
+
+    for (const f of this.fireConduits) {
+      f.timer += deltaSec;
+      if (f.timer >= cycleTotal) {
+        f.timer = 0;
+      }
+
+      f.flameGfx.clear();
+
+      if (f.timer < fCfg.fireCooldownDuration) {
+        // Safe Cooldown Phase
+        f.state = 'cooldown';
+      } else if (f.timer < fCfg.fireCooldownDuration + fCfg.fireWarningDuration) {
+        // Warning Phase: Sputtering sparks and orange glow
+        f.state = 'warning';
+        f.flameGfx.fillStyle(0xffaa00, 0.6);
+        f.flameGfx.fillCircle(f.x, f.y, 8 + Math.sin(f.timer * 20) * 3);
+      } else {
+        // Active Flame Jet Phase: Blazing plasma barrier spanning 80px across corridor
+        f.state = 'active';
+
+        // Draw roaring flame stream
+        const flameLength = 80;
+        const fGradColor = 0xff5500;
+        f.flameGfx.fillStyle(fGradColor, 0.85);
+        f.flameGfx.fillRoundedRect(f.x - 12, f.y - 8, flameLength, 16, 6);
+
+        f.flameGfx.fillStyle(0xffee33, 0.95);
+        f.flameGfx.fillRoundedRect(f.x - 8, f.y - 4, flameLength * 0.65, 8, 4);
+
+        // Check damage intersection with astronaut
+        const inFlameX = this.astronaut.x >= f.x - 16 && this.astronaut.x <= f.x + flameLength + 10;
+        const inFlameY = Math.abs(this.astronaut.y - f.y) < 18;
+
+        if (inFlameX && inFlameY) {
+          // Burn suit: Rapid O2 drain & pushback
+          this.gameState.drainOxygen(fCfg.fireDamagePerSecond * deltaSec);
+          this.cameras.main.shake(20, 0.001);
+
+          this.matter.body.setVelocity(this.astronaut.body, {
+            x: this.astronaut.body.velocity.x + 25 * deltaSec,
+            y: this.astronaut.body.velocity.y + 15 * deltaSec,
+          });
+
+          this.thrusterParticles.emitParticleAt(this.astronaut.x, this.astronaut.y, 2);
+        }
+      }
+    }
+  }
+
+  /**
+   * Checks for Oxygen canister pickup.
+   */
+  updateOxygenCanisters() {
+    for (const o of this.oxygenCanisters) {
+      if (o.collected) continue;
+      const dist = Math.hypot(this.astronaut.x - o.x, this.astronaut.y - o.y);
+
+      if (dist < 40) {
+        o.collected = true;
+
+        this.gameState.restoreOxygen(CONFIG.oxygen.tankRestoreAmount);
+        if (this.hud) {
+          this.hud.updateOxygen(this.gameState.oxygen, CONFIG.oxygen.max);
+          this.hud.showAnnouncement('+30% O2 RESTORED');
+        }
+
+        this.tweens.add({
+          targets: o.sprite,
+          scale: 1.6,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => o.sprite.destroy(),
+        });
+      }
     }
   }
 
@@ -779,30 +1129,24 @@ export class GameScene extends Phaser.Scene {
   update360StationRotation(deltaSec) {
     const mazeCfg = CONFIG.maze;
 
-    // Smoothly interpolate current spin rate towards target spin
     this.stationCurrentSpin = Phaser.Math.Linear(
       this.stationCurrentSpin,
       this.stationSpinTarget,
       mazeCfg.spinLerp
     );
 
-    // Integrate angle (full 360-degree rotation)
     this.stationAngle += this.stationCurrentSpin * deltaSec;
     this.stationAngle = Phaser.Math.Angle.Wrap(this.stationAngle);
 
-    // Apply 360-degree rotation to camera view
     this.cameras.main.setRotation(this.stationAngle);
 
-    // Fire visible RCS thruster plumes on the station hull while spinning
     if (this.stationCurrentSpin < -0.15) {
-      // Spinning CCW -> Starboard thruster pods fire into space
       this.thrusterParticles.emitParticleAt(
         this.shaftOriginX + this.level.pixelWidth + 14,
         this.astronaut.y,
         1
       );
     } else if (this.stationCurrentSpin > 0.15) {
-      // Spinning CW -> Port thruster pods fire into space
       this.thrusterParticles.emitParticleAt(
         this.shaftOriginX - 14,
         this.astronaut.y,

@@ -104,6 +104,22 @@ export class GameState {
     this.listeners.oxygenChange.forEach(fn => fn(this.oxygen, CONFIG.oxygen.max));
   }
 
+  restoreOxygen(amount = CONFIG.oxygen.tankRestoreAmount) {
+    this.refillOxygen(amount);
+  }
+
+  /**
+   * Drains oxygen from hazard damage (e.g. fire jets).
+   * @param {number} amount 
+   */
+  drainOxygen(amount) {
+    this.oxygen = Math.max(0, this.oxygen - amount);
+    this.listeners.oxygenChange.forEach(fn => fn(this.oxygen, CONFIG.oxygen.max));
+    if (this.oxygen <= 0) {
+      this.triggerGameOver('Life support breached! Severe suit damage caused total O2 loss.');
+    }
+  }
+
   /**
    * Triggers landing pad victory.
    * @param {object} stats 
@@ -120,14 +136,15 @@ export class GameState {
   }
 
   /**
-   * Triggers mission failure (oxygen loss).
-   * @param {string} reason 
+   * Triggers mission failure (oxygen loss, deep space ejection, etc.).
+   * @param {string|object} reason 
    */
   triggerGameOver(reason = 'Mission aborted.') {
     if (this.status !== GAME_STATUS.PLAYING) return;
     this.status = GAME_STATUS.LOST;
+    const reasonStr = typeof reason === 'object' && reason.reason ? reason.reason : (typeof reason === 'string' ? reason : 'Mission aborted.');
     this.listeners.gameOver.forEach(fn => fn({
-      reason,
+      reason: reasonStr,
       elapsedTime: this.elapsedTime,
       depthProgress: this.depthProgress,
     }));

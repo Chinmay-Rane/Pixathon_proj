@@ -2,10 +2,14 @@
  * BOOT SCENE - PROCEDURAL ASSET GENERATOR
  * 
  * Procedurally generates high-definition vector textures:
- * - High-Definition Astronaut (Bright white EVA suit, gold/cyan reflective visor, chest DCM console,
- *   flexible joint gaskets, mission patches, zero-g floating boots & gloves, backpack PLSS tanks)
- * - Authentic Metallic Spaceship Bulkhead Plates (bevels, rivets, brushed titanium grain)
- * - Diagonal Caution Hazard Stripes (industrial spaceship airlock markings)
+ * - High-Definition Astronaut (EVA suit, reflective visor, DCM chest console, PLSS backpack)
+ * - Authentic Metallic Spaceship Bulkhead Plates & Hazard Caution Stripes
+ * - Heavy Movable Cargo Containers ('C')
+ * - Glowing Holographic Security Keycards ('K')
+ * - Reinforced Mechanical Security Blast Doors ('X')
+ * - Decompression Hull Breach Vortex ('B')
+ * - Wall-Mounted Plasma Flame Conduits ('H')
+ * - Life-Support Oxygen Canisters ('O')
  * - Exterior RCS Thruster Pod Housings
  * - Layered Radial Gradient Planet Body & Additive Corona Haze
  * - High-Visibility 76px Landing Pad Beacon
@@ -28,6 +32,12 @@ export class BootScene extends Phaser.Scene {
     this.createBulkheadTexture();
     this.createHazardStripeTexture();
     this.createRcsPodTexture();
+    this.createCrateTexture();
+    this.createKeycardTexture();
+    this.createBlastDoorTexture();
+    this.createBreachTexture();
+    this.createFireNozzleTexture();
+    this.createOxygenCanisterTexture();
     this.createDiamondStarTexture();
     this.createLandingPadTexture();
     this.createThrusterParticleTexture();
@@ -40,10 +50,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   /**
-   * Generates a 76x76 high-definition, authentic Astronaut sprite:
-   * Features bright white EVA suit fabric, gold/cyan curved reflective bubble visor,
-   * chest DCM console with status indicators, microgravity floating posture (gloves, boots),
-   * life-support backpack with dual oxygen tanks, and soft warm ambient aura.
+   * Generates a 76x76 high-definition, authentic Astronaut sprite.
    */
   createAstronautTexture() {
     const size = CONFIG.astronaut.spriteSize; // 76x76
@@ -65,7 +72,6 @@ export class BootScene extends Phaser.Scene {
     ctx.fill();
 
     // 2. Heavy Life-Support Backpack (PLSS)
-    // Mounted behind astronaut (towards the top/rear of suit)
     ctx.fillStyle = '#141e2c';
     ctx.strokeStyle = '#2c3e54';
     ctx.lineWidth = 2;
@@ -89,14 +95,13 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
       ctx.stroke();
 
-      // Tank telemetry band
       ctx.fillStyle = '#00d5ff';
       ctx.fillRect(tx - 6, cy - 16, 12, 3);
     };
     drawTank(cx - 10);
     drawTank(cx + 10);
 
-    // Backpack Status Telemetry LED
+    // Status LED
     ctx.fillStyle = '#00f0ff';
     ctx.shadowColor = '#00f0ff';
     ctx.shadowBlur = 8;
@@ -105,14 +110,13 @@ export class BootScene extends Phaser.Scene {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Micro Attitude Thruster Nozzles on Backpack Corners
+    // Micro Attitude Thruster Nozzles
     ctx.fillStyle = '#486078';
     ctx.fillRect(cx - 17, cy - 24, 3, 4);
     ctx.fillRect(cx + 14, cy - 24, 3, 4);
 
     // 3. Zero-G Floating Legs & Boots
     const drawLeg = (lx, isLeft) => {
-      // Upper leg & knee
       const legGrad = ctx.createLinearGradient(lx - 6, cy + 6, lx + 6, cy + 6);
       legGrad.addColorStop(0, '#ccddee');
       legGrad.addColorStop(0.5, '#ffffff');
@@ -126,7 +130,6 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
       ctx.stroke();
 
-      // Accordion knee flex joint
       ctx.strokeStyle = '#1a2432';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -134,7 +137,6 @@ export class BootScene extends Phaser.Scene {
       ctx.lineTo(lx + 5, cy + 14);
       ctx.stroke();
 
-      // Heavy EVA Lunar Boot
       const bootGrad = ctx.createLinearGradient(lx - 7, cy + 22, lx + 7, cy + 22);
       bootGrad.addColorStop(0, '#1c2838');
       bootGrad.addColorStop(0.7, '#2a3a50');
@@ -146,7 +148,6 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
       ctx.stroke();
 
-      // Boot sole grip & cyan heel latch
       ctx.fillStyle = '#00e5ff';
       ctx.fillRect(lx - (isLeft ? 7 : 5), cy + 28, 12, 2);
     };
@@ -155,7 +156,6 @@ export class BootScene extends Phaser.Scene {
 
     // 4. Zero-G Floating Arms & Gloves
     const drawArm = (armX, isLeft) => {
-      // Sleeve
       const armGrad = ctx.createLinearGradient(armX - 6, cy - 8, armX + 6, cy - 8);
       armGrad.addColorStop(0, '#ccddee');
       armGrad.addColorStop(0.5, '#ffffff');
@@ -169,7 +169,6 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
       ctx.stroke();
 
-      // Accordion elbow flex joint
       ctx.strokeStyle = '#1a2432';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -177,7 +176,6 @@ export class BootScene extends Phaser.Scene {
       ctx.lineTo(armX + 5, cy + 2);
       ctx.stroke();
 
-      // Pressurized EVA Thermal Glove
       ctx.fillStyle = '#1e2c3c';
       ctx.strokeStyle = '#0e1824';
       ctx.lineWidth = 1.5;
@@ -186,14 +184,13 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
       ctx.stroke();
 
-      // Glove grip palm
       ctx.fillStyle = '#00d5ff';
       ctx.fillRect(armX - 2, cy + 11, 4, 2);
     };
     drawArm(cx - 20, true);
     drawArm(cx + 20, false);
 
-    // 5. Pressurized Spacesuit Torso (Bright White EVA Fabric)
+    // 5. Pressurized Spacesuit Torso
     const suitGrad = ctx.createRadialGradient(cx - 4, cy, 4, cx, cy + 2, 22);
     suitGrad.addColorStop(0, '#ffffff');
     suitGrad.addColorStop(0.65, '#f0f5fa');
@@ -208,7 +205,6 @@ export class BootScene extends Phaser.Scene {
     ctx.stroke();
 
     // Shoulder Mission Patches
-    // Left: Blue planetary globe patch
     ctx.fillStyle = '#0077dd';
     ctx.beginPath();
     ctx.arc(cx - 15, cy - 4, 3, 0, Math.PI * 2);
@@ -216,7 +212,6 @@ export class BootScene extends Phaser.Scene {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(cx - 16, cy - 5, 2, 2);
 
-    // Right: Gold mission commander chevron
     ctx.fillStyle = '#ffaa00';
     ctx.beginPath();
     ctx.moveTo(cx + 13, cy - 6);
@@ -226,7 +221,6 @@ export class BootScene extends Phaser.Scene {
     ctx.fill();
 
     // 6. Chest Display & Control Module (DCM)
-    // The iconic Apollo/ISS chest control unit with valves, buttons, and telemetry
     const dcmGrad = ctx.createLinearGradient(cx - 9, cy - 4, cx + 9, cy + 8);
     dcmGrad.addColorStop(0, '#253548');
     dcmGrad.addColorStop(1, '#141d28');
@@ -239,13 +233,11 @@ export class BootScene extends Phaser.Scene {
     ctx.fill();
     ctx.stroke();
 
-    // DCM Digital Telemetry Lines
     ctx.fillStyle = '#00ff88';
     ctx.fillRect(cx - 7, cy - 2, 8, 1.5);
     ctx.fillStyle = '#00d5ff';
     ctx.fillRect(cx - 7, cy + 1, 6, 1.5);
 
-    // DCM Color-Coded Valves (Red emergency purge + Blue main O2 dial)
     ctx.fillStyle = '#ff3344';
     ctx.beginPath();
     ctx.arc(cx + 4, cy - 1, 1.8, 0, Math.PI * 2);
@@ -291,7 +283,7 @@ export class BootScene extends Phaser.Scene {
     ctx.fillRect(cx + 15.5, cy - 19, 1.5, 3);
     ctx.shadowBlur = 0;
 
-    // 9. RADIANT CURVED REFLECTIVE VISOR (Gold / Cyan Metallic Specular Sheen)
+    // 9. RADIANT CURVED REFLECTIVE VISOR
     ctx.shadowColor = '#00f0ff';
     ctx.shadowBlur = 12;
 
@@ -307,12 +299,10 @@ export class BootScene extends Phaser.Scene {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Visor Dark Pressure Gasket Seal
     ctx.strokeStyle = '#081422';
     ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // Curved Specular Glint Reflection Arc (Glossy Glass Highlight)
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.ellipse(cx - 4, cy - 22, 4.5, 2, -0.25, 0, Math.PI * 2);
@@ -322,8 +312,285 @@ export class BootScene extends Phaser.Scene {
   }
 
   /**
+   * Generates heavy movable cargo container texture ('C') (58x58).
+   */
+  createCrateTexture() {
+    const size = CONFIG.items.crateSize; // 58px
+    const canvas = this.textures.createCanvas('crate', size, size);
+    const ctx = canvas.context;
+
+    ctx.clearRect(0, 0, size, size);
+
+    // Dark Titanium Steel Body
+    const bodyGrad = ctx.createLinearGradient(0, 0, size, size);
+    bodyGrad.addColorStop(0, '#36485e');
+    bodyGrad.addColorStop(0.5, '#243446');
+    bodyGrad.addColorStop(1, '#162230');
+
+    ctx.fillStyle = bodyGrad;
+    ctx.fillRect(0, 0, size, size);
+
+    // Beveled Highlights & Shadows
+    ctx.fillStyle = '#587494';
+    ctx.fillRect(0, 0, size, 2);
+    ctx.fillRect(0, 0, 2, size);
+    ctx.fillStyle = '#080e16';
+    ctx.fillRect(0, size - 2, size, 2);
+    ctx.fillRect(size - 2, 0, 2, size);
+
+    // Yellow Hazard Reinforced Corner Brackets
+    ctx.fillStyle = '#ffaa00';
+    const cSize = 12;
+    // Top-left
+    ctx.fillRect(2, 2, cSize, 3);
+    ctx.fillRect(2, 2, 3, cSize);
+    // Top-right
+    ctx.fillRect(size - cSize - 2, 2, cSize, 3);
+    ctx.fillRect(size - 5, 2, 3, cSize);
+    // Bottom-left
+    ctx.fillRect(2, size - 5, cSize, 3);
+    ctx.fillRect(2, size - cSize - 2, 3, cSize);
+    // Bottom-right
+    ctx.fillRect(size - cSize - 2, size - 5, cSize, 3);
+    ctx.fillRect(size - 5, size - cSize - 2, 3, cSize);
+
+    // Central Stencil Label Box
+    ctx.fillStyle = '#0c141e';
+    ctx.fillRect(10, size / 2 - 8, size - 20, 16);
+    ctx.strokeStyle = '#3e5672';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, size / 2 - 8, size - 20, 16);
+
+    ctx.fillStyle = '#00e5ff';
+    ctx.font = 'bold 8px Courier New, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CARGO', size / 2, size / 2 + 3);
+
+    // Corner Hex Rivets
+    const drawRivet = (rx, ry) => {
+      ctx.fillStyle = '#080c12';
+      ctx.beginPath();
+      ctx.arc(rx, ry, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#8caac8';
+      ctx.beginPath();
+      ctx.arc(rx - 0.5, ry - 0.5, 1, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    drawRivet(7, 7);
+    drawRivet(size - 7, 7);
+    drawRivet(7, size - 7);
+    drawRivet(size - 7, size - 7);
+
+    canvas.refresh();
+  }
+
+  /**
+   * Generates glowing holographic security keycard ('K') (40x26).
+   */
+  createKeycardTexture() {
+    const w = 40;
+    const h = 26;
+    const canvas = this.textures.createCanvas('keycard', w, h);
+    const ctx = canvas.context;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Glowing Gold Aura
+    ctx.shadowColor = '#ffea00';
+    ctx.shadowBlur = 10;
+
+    // Gold Holo Card Base
+    const cardGrad = ctx.createLinearGradient(0, 0, w, h);
+    cardGrad.addColorStop(0, '#ffe044');
+    cardGrad.addColorStop(0.5, '#ffaa00');
+    cardGrad.addColorStop(1, '#ff7700');
+
+    ctx.fillStyle = cardGrad;
+    ctx.beginPath();
+    ctx.roundRect(3, 3, w - 6, h - 6, 4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Cyan Microchip Circuits
+    ctx.fillStyle = '#00f0ff';
+    ctx.fillRect(8, 7, 10, 12);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(8, 7, 10, 12);
+
+    // Security Encrypted Data Lines
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(22, 9, 10, 1.5);
+    ctx.fillRect(22, 13, 8, 1.5);
+    ctx.fillRect(22, 17, 6, 1.5);
+
+    canvas.refresh();
+  }
+
+  /**
+   * Generates locked blast door texture ('X') (76x30).
+   */
+  createBlastDoorTexture() {
+    const w = CONFIG.visuals.tileSize; // 76px
+    const h = 30;
+    const canvas = this.textures.createCanvas('blast_door', w, h);
+    const ctx = canvas.context;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Heavy Titanium Barrier Frame
+    const doorGrad = ctx.createLinearGradient(0, 0, 0, h);
+    doorGrad.addColorStop(0, '#283648');
+    doorGrad.addColorStop(0.5, '#162230');
+    doorGrad.addColorStop(1, '#0e1620');
+
+    ctx.fillStyle = doorGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Interlocking Blast Teeth
+    ctx.fillStyle = '#080e14';
+    for (let x = 6; x < w - 6; x += 12) {
+      ctx.fillRect(x, h / 2 - 3, 6, 6);
+    }
+
+    // Red Locked Warning LED Strip
+    ctx.shadowColor = '#ff3344';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#ff2233';
+    ctx.fillRect(4, 3, w - 8, 3);
+    ctx.fillRect(4, h - 6, w - 8, 3);
+    ctx.shadowBlur = 0;
+
+    // Center Security Lock Indicator
+    ctx.fillStyle = '#ff3344';
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    canvas.refresh();
+  }
+
+  /**
+   * Generates decompression hull breach vortex texture ('B') (64x64).
+   */
+  createBreachTexture() {
+    const size = 64;
+    const canvas = this.textures.createCanvas('breach_vortex', size, size);
+    const ctx = canvas.context;
+    const center = size / 2;
+
+    ctx.clearRect(0, 0, size, size);
+
+    // Outer Depressurization Vapor Cloud
+    const vortexGrad = ctx.createRadialGradient(center, center, 4, center, center, center);
+    vortexGrad.addColorStop(0, '#000000');
+    vortexGrad.addColorStop(0.4, 'rgba(0, 180, 255, 0.45)');
+    vortexGrad.addColorStop(0.8, 'rgba(0, 100, 255, 0.20)');
+    vortexGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    ctx.fillStyle = vortexGrad;
+    ctx.beginPath();
+    ctx.arc(center, center, center, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Jagged Sheared Hull Edges
+    ctx.strokeStyle = '#486484';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(8, 20);
+    ctx.lineTo(16, 8);
+    ctx.lineTo(36, 12);
+    ctx.lineTo(54, 6);
+    ctx.lineTo(58, 28);
+    ctx.lineTo(52, 54);
+    ctx.lineTo(30, 58);
+    ctx.lineTo(8, 48);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Swirling Vacuum Core
+    ctx.fillStyle = '#030812';
+    ctx.beginPath();
+    ctx.arc(center, center, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    canvas.refresh();
+  }
+
+  /**
+   * Generates wall-mounted plasma flame conduit nozzle ('H') (28x28).
+   */
+  createFireNozzleTexture() {
+    const size = 28;
+    const canvas = this.textures.createCanvas('fire_nozzle', size, size);
+    const ctx = canvas.context;
+    const center = size / 2;
+
+    ctx.clearRect(0, 0, size, size);
+
+    // Titanium Flange
+    ctx.fillStyle = '#1c2838';
+    ctx.strokeStyle = '#384e68';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(4, 4, size - 8, size - 8);
+    ctx.strokeRect(4, 4, size - 8, size - 8);
+
+    // Burnished Flame Nozzle Core
+    ctx.shadowColor = '#ff6600';
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = '#ff4400';
+    ctx.beginPath();
+    ctx.arc(center, center, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Glowing Yellow Core
+    ctx.fillStyle = '#ffea00';
+    ctx.beginPath();
+    ctx.arc(center, center, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    canvas.refresh();
+  }
+
+  /**
+   * Generates life-support oxygen canister capsule ('O') (32x32).
+   */
+  createOxygenCanisterTexture() {
+    const size = 32;
+    const canvas = this.textures.createCanvas('oxygen_canister', size, size);
+    const ctx = canvas.context;
+    const center = size / 2;
+
+    ctx.clearRect(0, 0, size, size);
+
+    // Soft Green Glow
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur = 8;
+
+    // Metallic Capsule Body
+    const capGrad = ctx.createLinearGradient(6, 6, size - 6, size - 6);
+    capGrad.addColorStop(0, '#00ffaa');
+    capGrad.addColorStop(0.5, '#00aa55');
+    capGrad.addColorStop(1, '#00552b');
+
+    ctx.fillStyle = capGrad;
+    ctx.beginPath();
+    ctx.roundRect(6, 4, size - 12, size - 8, 6);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Medical Cross Emblem
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(center - 1.5, center - 6, 3, 12);
+    ctx.fillRect(center - 6, center - 1.5, 12, 3);
+
+    canvas.refresh();
+  }
+
+  /**
    * Generates authentic metallic spaceship bulkhead plate texture (76x76).
-   * Features beveled edges, rivet studs, brushed titanium gradient, and panel seams.
    */
   createBulkheadTexture() {
     const size = CONFIG.visuals.tileSize; // 76x76
@@ -332,7 +599,6 @@ export class BootScene extends Phaser.Scene {
 
     ctx.clearRect(0, 0, size, size);
 
-    // Metallic Titanium Base Gradient
     const baseGrad = ctx.createLinearGradient(0, 0, 0, size);
     baseGrad.addColorStop(0, '#223246');
     baseGrad.addColorStop(0.5, '#162232');
@@ -341,19 +607,13 @@ export class BootScene extends Phaser.Scene {
     ctx.fillStyle = baseGrad;
     ctx.fillRect(0, 0, size, size);
 
-    // Beveled Highlights & Shadows (3D metallic depth)
-    // Top highlight
     ctx.fillStyle = '#486584';
     ctx.fillRect(0, 0, size, 2);
-    // Left highlight
     ctx.fillRect(0, 0, 2, size);
-    // Bottom shadow
     ctx.fillStyle = '#060a10';
     ctx.fillRect(0, size - 2, size, 2);
-    // Right shadow
     ctx.fillRect(size - 2, 0, 2, size);
 
-    // Recessed Inner Panel Border
     ctx.strokeStyle = '#0a1018';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(6, 6, size - 12, size - 12);
@@ -362,7 +622,6 @@ export class BootScene extends Phaser.Scene {
     ctx.lineWidth = 1;
     ctx.strokeRect(7, 7, size - 14, size - 14);
 
-    // Hex Rivet Studs in 4 Corners
     const drawRivet = (rx, ry) => {
       ctx.fillStyle = '#080e16';
       ctx.beginPath();
@@ -379,26 +638,11 @@ export class BootScene extends Phaser.Scene {
     drawRivet(11, size - 11);
     drawRivet(size - 11, size - 11);
 
-    // Subtle Horizontal Structural Seam
-    ctx.strokeStyle = '#0b121b';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(8, size / 2);
-    ctx.lineTo(size - 8, size / 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#2a3e56';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(8, size / 2 + 1);
-    ctx.lineTo(size - 8, size / 2 + 1);
-    ctx.stroke();
-
     canvas.refresh();
   }
 
   /**
-   * Generates diagonal yellow/dark caution hazard stripes for bulkhead corners and ledges.
+   * Generates diagonal yellow/dark caution hazard stripes.
    */
   createHazardStripeTexture() {
     const w = 76;
@@ -424,7 +668,6 @@ export class BootScene extends Phaser.Scene {
       ctx.fill();
     }
 
-    // Top and bottom protective bevel
     ctx.fillStyle = '#ffcc44';
     ctx.fillRect(0, 0, w, 1.5);
     ctx.fillStyle = '#080c10';
@@ -444,7 +687,6 @@ export class BootScene extends Phaser.Scene {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Pod Titanium Housing
     const podGrad = ctx.createLinearGradient(0, 0, w, 0);
     podGrad.addColorStop(0, '#1c2838');
     podGrad.addColorStop(0.5, '#2c3e56');
@@ -458,7 +700,6 @@ export class BootScene extends Phaser.Scene {
     ctx.fill();
     ctx.stroke();
 
-    // Dual Rocket Nozzle Bells
     const drawNozzle = (ny) => {
       ctx.fillStyle = '#0e1622';
       ctx.strokeStyle = '#00d5ff';
@@ -482,7 +723,7 @@ export class BootScene extends Phaser.Scene {
    * Generates a cartoon diamond-shaped star for the dizzy stun effect.
    */
   createDiamondStarTexture() {
-    const size = 28; // Scaled up to match 76px astronaut
+    const size = 28;
     const canvas = this.textures.createCanvas('diamond_star', size, size);
     const ctx = canvas.context;
     const center = size / 2;
@@ -508,7 +749,6 @@ export class BootScene extends Phaser.Scene {
 
     ctx.shadowBlur = 0;
 
-    // Glowing white sparkle core
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(center, center, 3.5, 0, Math.PI * 2);
@@ -528,16 +768,13 @@ export class BootScene extends Phaser.Scene {
 
     ctx.clearRect(0, 0, size, size);
 
-    // Foundation plate with metallic hatch lines
     ctx.fillStyle = '#061a14';
     ctx.fillRect(2, 2, size - 4, size - 4);
 
-    // Perimeter warning border
     ctx.strokeStyle = '#00ff88';
     ctx.lineWidth = 2.5;
     ctx.strokeRect(3, 3, size - 6, size - 6);
 
-    // Concentric guidance rings
     ctx.strokeStyle = 'rgba(0, 255, 136, 0.45)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -550,7 +787,6 @@ export class BootScene extends Phaser.Scene {
     ctx.arc(center, center, size * 0.24, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Central landing beacon
     ctx.fillStyle = '#00ff88';
     ctx.shadowColor = '#00ff88';
     ctx.shadowBlur = 12;
@@ -559,7 +795,6 @@ export class BootScene extends Phaser.Scene {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Corner alignment chevrons
     ctx.strokeStyle = '#00ffaa';
     ctx.lineWidth = 2.5;
     ctx.beginPath();

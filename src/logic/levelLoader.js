@@ -1,17 +1,16 @@
 /**
  * LEVEL LOADER & ASCII TILE GRID PARSER
  * 
- * Independent of Phaser - can be tested alone in Node.js or browser.
  * Parses ASCII tile grid levels into structured data:
  * - Tile dimensions & pixel bounds
  * - Start ('S') and Landing exit pad ('E') positions
- * - Contiguous wall rectangles (merged horizontally to prevent ghost seams)
- * - Collectible and hazard coordinates:
- *   - 'O': Oxygen tank
- *   - 'F': Space food
- *   - 'D': Debris spawn
- *   - 'A': Alien spawn
- *   - 'P': Space dog power-up
+ * - Contiguous wall rectangles ('#')
+ * - Interactive movable cargo crates ('C')
+ * - Security Keycards ('K')
+ * - Locked Blast Doors ('X')
+ * - Decompression Hull Breaches ('B')
+ * - Venting Fire Hazards ('H')
+ * - Oxygen restoration canisters ('O')
  */
 
 export const TILE_TYPES = {
@@ -19,11 +18,12 @@ export const TILE_TYPES = {
   FLOOR: '.',
   START: 'S',
   EXIT: 'E',
+  CRATE: 'C',
+  KEY: 'K',
+  DOOR: 'X',
+  BREACH: 'B',
+  FIRE: 'H',
   OXYGEN: 'O',
-  FOOD: 'F',
-  DEBRIS: 'D',
-  ALIEN: 'A',
-  DOG: 'P',
 };
 
 /**
@@ -82,7 +82,7 @@ export function mergeWallRectangles(gridArray, tileSize) {
  * @param {number} tileSize 
  * @returns {object} Structured level data
  */
-export function parseLevel(levelData, tileSize = 48) {
+export function parseLevel(levelData, tileSize = 76) {
   if (!levelData || !Array.isArray(levelData.grid) || levelData.grid.length === 0) {
     throw new Error('Invalid level data: "grid" must be a non-empty array of strings.');
   }
@@ -100,11 +100,12 @@ export function parseLevel(levelData, tileSize = 48) {
 
   let start = null;
   let exit = null;
+  const crates = [];
+  const keycards = [];
+  const doors = [];
+  const breaches = [];
+  const fireHazards = [];
   const oxygenTanks = [];
-  const spaceFoods = [];
-  const debrisSpawns = [];
-  const alienSpawns = [];
-  const dogPowerups = [];
 
   for (let r = 0; r < heightInTiles; r++) {
     for (let c = 0; c < widthInTiles; c++) {
@@ -119,20 +120,23 @@ export function parseLevel(levelData, tileSize = 48) {
         case TILE_TYPES.EXIT:
           exit = { tileX: c, tileY: r, x: centerX, y: centerY };
           break;
+        case TILE_TYPES.CRATE:
+          crates.push({ tileX: c, tileY: r, x: centerX, y: centerY });
+          break;
+        case TILE_TYPES.KEY:
+          keycards.push({ tileX: c, tileY: r, x: centerX, y: centerY });
+          break;
+        case TILE_TYPES.DOOR:
+          doors.push({ tileX: c, tileY: r, x: centerX, y: centerY, width: tileSize, height: tileSize });
+          break;
+        case TILE_TYPES.BREACH:
+          breaches.push({ tileX: c, tileY: r, x: centerX, y: centerY });
+          break;
+        case TILE_TYPES.FIRE:
+          fireHazards.push({ tileX: c, tileY: r, x: centerX, y: centerY });
+          break;
         case TILE_TYPES.OXYGEN:
           oxygenTanks.push({ tileX: c, tileY: r, x: centerX, y: centerY });
-          break;
-        case TILE_TYPES.FOOD:
-          spaceFoods.push({ tileX: c, tileY: r, x: centerX, y: centerY });
-          break;
-        case TILE_TYPES.DEBRIS:
-          debrisSpawns.push({ tileX: c, tileY: r, x: centerX, y: centerY });
-          break;
-        case TILE_TYPES.ALIEN:
-          alienSpawns.push({ tileX: c, tileY: r, x: centerX, y: centerY });
-          break;
-        case TILE_TYPES.DOG:
-          dogPowerups.push({ tileX: c, tileY: r, x: centerX, y: centerY });
           break;
         case TILE_TYPES.WALL:
         case TILE_TYPES.FLOOR:
@@ -168,10 +172,11 @@ export function parseLevel(levelData, tileSize = 48) {
     start,
     exit,
     mergedWalls,
+    crates,
+    keycards,
+    doors,
+    breaches,
+    fireHazards,
     oxygenTanks,
-    spaceFoods,
-    debrisSpawns,
-    alienSpawns,
-    dogPowerups,
   };
 }

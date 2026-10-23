@@ -5,12 +5,11 @@
  * - Mission timer & level sector
  * - Descent Depth gauge (progress from top of shaft to planet surface)
  * - Planet Gravity Telemetry (surface pull in G-force and px/s² acceleration)
+ * - Security Keycard Status indicator (Locked / Acquired)
  * - Retro-Brake capacitor meter (charge drain & recharge status)
  * - Oxygen status gauge with low-O2 warning pulses
+ * - Tactical holographic announcements (Access Granted, Hull Breach, etc.)
  * - Quick controls reference & instant restart button [R]
- * 
- * Designed so that all telemetry is cleanly housed in the top header,
- * leaving the entire playfield shaft 100% unobstructed.
  */
 
 import { CONFIG } from '../logic/config.js';
@@ -41,7 +40,7 @@ export class HUD {
         <div class="hud-section hud-left">
           <div class="hud-title-block">
             <span class="hud-tag">VERTICAL SHAFT DESCENT // ZERO-G MAZE</span>
-            <h1 class="hud-title" id="hud-level-name">ORBITAL DESCENT: PRIMARY SHAFT</h1>
+            <h1 class="hud-title" id="hud-level-name">SECTOR 01: PRIMARY AIRLOCK</h1>
           </div>
           <div class="hud-timer-block">
             <span class="hud-label">DESCENT TIME</span>
@@ -49,7 +48,7 @@ export class HUD {
           </div>
         </div>
 
-        <!-- Center: Descent Progress & Planet Gravity Surface Pull -->
+        <!-- Center: Descent Progress & Security Keycard Status -->
         <div class="hud-section hud-center">
           <!-- Altitude Progress Bar -->
           <div class="telemetry-module altitude-module">
@@ -62,11 +61,24 @@ export class HUD {
             </div>
           </div>
 
+          <!-- Security Keycard Status -->
+          <div class="telemetry-module keycard-module">
+            <div class="module-label-row">
+              <span class="module-title">
+                <span class="panel-dot key-dot" id="hud-key-dot"></span> SECURITY KEY
+              </span>
+              <span class="module-val key-val" id="hud-key-status">REQUIRED</span>
+            </div>
+            <div class="key-sub-row">
+              <span class="hud-mini-label" id="hud-key-detail">DOORS LOCKED</span>
+            </div>
+          </div>
+
           <!-- Planet Gravity Pull Readout -->
           <div class="telemetry-module gravity-module">
             <div class="module-label-row">
               <span class="module-title gravity-title">
-                <span class="panel-dot gravity-dot"></span> PLANET GRAVITY
+                <span class="panel-dot gravity-dot"></span> GRAVITY
               </span>
               <span class="module-val gravity-val" id="hud-gravity-g">1.00 G</span>
             </div>
@@ -110,6 +122,13 @@ export class HUD {
         </div>
       </header>
 
+      <!-- Central Holographic Banner for Announcements -->
+      <div class="hud-announcement-container" id="hud-announcement" style="display: none;">
+        <div class="hud-announcement-card" id="hud-announcement-card">
+          <span class="hud-announcement-text" id="hud-announcement-text">STAGE ACCESS GRANTED</span>
+        </div>
+      </div>
+
       <!-- Bottom Floating Controls Guide (Unobtrusive) -->
       <footer class="hud-footer">
         <div class="controls-legend">
@@ -128,6 +147,9 @@ export class HUD {
       timer: this.root.querySelector('#hud-timer'),
       depthBar: this.root.querySelector('#hud-depth-bar'),
       depthPercent: this.root.querySelector('#hud-depth-percent'),
+      keyDot: this.root.querySelector('#hud-key-dot'),
+      keyStatus: this.root.querySelector('#hud-key-status'),
+      keyDetail: this.root.querySelector('#hud-key-detail'),
       gravityG: this.root.querySelector('#hud-gravity-g'),
       gravityVal: this.root.querySelector('#hud-gravity-val'),
       brakeBar: this.root.querySelector('#hud-brake-bar'),
@@ -135,6 +157,9 @@ export class HUD {
       o2Bar: this.root.querySelector('#hud-o2-bar'),
       o2Text: this.root.querySelector('#hud-o2-text'),
       restartBtn: this.root.querySelector('#hud-restart-btn'),
+      announcement: this.root.querySelector('#hud-announcement'),
+      announcementCard: this.root.querySelector('#hud-announcement-card'),
+      announcementText: this.root.querySelector('#hud-announcement-text'),
     };
   }
 
@@ -148,6 +173,41 @@ export class HUD {
     if (this.el.levelName) {
       this.el.levelName.textContent = name.toUpperCase();
     }
+  }
+
+  updateKeycardStatus(hasKey) {
+    if (hasKey) {
+      this.el.keyDot.classList.add('key-acquired');
+      this.el.keyStatus.textContent = 'ACQUIRED';
+      this.el.keyStatus.style.color = '#00ff88';
+      this.el.keyDetail.textContent = 'DOORS UNLOCKED';
+      this.el.keyDetail.style.color = '#33ffaa';
+    } else {
+      this.el.keyDot.classList.remove('key-acquired');
+      this.el.keyStatus.textContent = 'REQUIRED';
+      this.el.keyStatus.style.color = '#ffaa00';
+      this.el.keyDetail.textContent = 'DOORS LOCKED';
+      this.el.keyDetail.style.color = '#7da0c5';
+    }
+  }
+
+  showAnnouncement(message, isWarning = false) {
+    if (!this.el.announcement) return;
+
+    this.el.announcementText.textContent = message.toUpperCase();
+    if (isWarning) {
+      this.el.announcementCard.classList.add('banner-warning');
+    } else {
+      this.el.announcementCard.classList.remove('banner-warning');
+    }
+
+    this.el.announcement.style.display = 'flex';
+    clearTimeout(this.announcementTimeout);
+    this.announcementTimeout = setTimeout(() => {
+      if (this.el.announcement) {
+        this.el.announcement.style.display = 'none';
+      }
+    }, 2800);
   }
 
   updateTimer(seconds) {
