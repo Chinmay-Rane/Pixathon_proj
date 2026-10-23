@@ -1,0 +1,361 @@
+/* ==========================================================================
+   SIRTET: ORBITAL DESCENT MAZE - BLUEPRINT DESIGN SYSTEM
+   ========================================================================== */
+
+:root {
+  --bg-deep: #030812;
+  --bg-card: rgba(6, 20, 38, 0.90);
+  --border-cyan: #00e5ff;
+  --border-cyan-dim: rgba(0, 229, 255, 0.28);
+  --accent-amber: #ffaa00;
+  --accent-green: #00ff88;
+  --accent-red: #ff3366;
+  --text-main: #e2f1ff;
+  --text-dim: #7da0c5;
+  --font-ui: 'Chakra Petch', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#game-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+#game-container canvas {
+  display: block;
+  outline: none;
+}
+
+/* ==========================================================================
+   HUD TELEMETRY OVERLAY (100% Non-Overlapping Top Header)
+   ========================================================================== */
+
+#hud-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.blueprint-hud {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px 20px;
+}
+
+/* Top Header Bar */
+.hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(180deg, rgba(6, 18, 34, 0.94) 0%, rgba(4, 12, 24, 0.75) 100%);
+  border: 1px solid var(--border-cyan-dim);
+  border-radius: 8px;
+  padding: 8px 18px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(0, 229, 255, 0.25);
+  pointer-events: auto;
+}
+
+.hud-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hud-left {
+  gap: 20px;
+}
+
+.hud-tag {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--border-cyan);
+}
+
+.hud-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+}
+
+.hud-timer-block {
+  border-left: 1px solid var(--border-cyan-dim);
+  padding-left: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+.hud-val {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Telemetry Modules in Top Header */
+.telemetry-module {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.altitude-module {
+  width: 140px;
+}
+
+.gravity-module {
+  width: 130px;
+  border-left: 1px solid var(--border-cyan-dim);
+  padding-left: 14px;
+}
+
+.brake-module {
+  width: 130px;
+}
+
+.oxygen-module {
+  width: 130px;
+}
+
+.module-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.module-title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.module-val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--border-cyan);
+}
+
+.gravity-val {
+  color: #ff9944;
+}
+
+.gravity-accel-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.hud-mini-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-dim);
+}
+
+.hud-mini-val {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffaa55;
+}
+
+.module-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(6, 16, 28, 0.95);
+  border: 1px solid var(--border-cyan-dim);
+  border-radius: 3px;
+  overflow: hidden;
+  padding: 1px;
+}
+
+.module-bar {
+  height: 100%;
+  border-radius: 1.5px;
+  transition: width 0.15s ease-out;
+}
+
+.alt-bar {
+  background: linear-gradient(90deg, #0077ff 0%, var(--border-cyan) 100%);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.6);
+}
+
+.brake-bar {
+  background: linear-gradient(90deg, #ff8800 0%, var(--accent-amber) 100%);
+  box-shadow: 0 0 6px rgba(255, 170, 0, 0.6);
+}
+
+.brake-bar.active {
+  background: linear-gradient(90deg, #ffffff 0%, var(--accent-amber) 100%);
+  box-shadow: 0 0 12px rgba(255, 170, 0, 0.9);
+  animation: pulse-brake 0.2s infinite alternate;
+}
+
+@keyframes pulse-brake {
+  from { opacity: 0.8; }
+  to { opacity: 1.0; }
+}
+
+.brake-val {
+  color: var(--accent-green);
+  font-size: 11px;
+}
+
+.oxygen-bar {
+  background: linear-gradient(90deg, #00b4d8 0%, var(--accent-green) 100%);
+  box-shadow: 0 0 6px rgba(0, 255, 136, 0.6);
+  transition: width 0.15s ease-out, background 0.3s;
+}
+
+.oxygen-bar.o2-warning {
+  background: linear-gradient(90deg, #ff9900 0%, var(--accent-amber) 100%);
+  box-shadow: 0 0 8px rgba(255, 170, 0, 0.7);
+}
+
+.oxygen-bar.o2-critical {
+  background: linear-gradient(90deg, #ff0055 0%, var(--accent-red) 100%);
+  box-shadow: 0 0 12px rgba(255, 51, 102, 0.9);
+  animation: pulse-crit 0.8s infinite alternate;
+}
+
+.oxygen-percent {
+  color: var(--accent-green);
+  font-size: 12px;
+}
+
+.o2-text-critical {
+  color: var(--accent-red) !important;
+  animation: pulse-crit 0.8s infinite alternate;
+}
+
+@keyframes pulse-crit {
+  from { opacity: 0.5; }
+  to { opacity: 1.0; }
+}
+
+.panel-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.panel-dot.brake-dot {
+  background: var(--accent-amber);
+  box-shadow: 0 0 5px var(--accent-amber);
+}
+
+.panel-dot.gravity-dot {
+  background: #ff5533;
+  box-shadow: 0 0 5px #ff5533;
+}
+
+.hud-btn-restart {
+  background: rgba(14, 34, 60, 0.85);
+  border: 1px solid var(--border-cyan-dim);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.hud-btn-restart:hover {
+  background: var(--border-cyan);
+  color: #030812;
+  border-color: var(--border-cyan);
+}
+
+/* ==========================================================================
+   Bottom Controls Legend (Unobtrusive Corner Pill)
+   ========================================================================== */
+
+.hud-footer {
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.controls-legend {
+  background: rgba(6, 20, 38, 0.85);
+  border: 1px solid var(--border-cyan-dim);
+  border-radius: 6px;
+  padding: 6px 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.legend-tag {
+  color: var(--border-cyan);
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.legend-key {
+  color: #ffffff;
+  font-weight: 700;
+}

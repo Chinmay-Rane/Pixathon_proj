@@ -1,0 +1,26 @@
+{
+  "name": "pixathon-sirtet",
+  "version": "1.0.0",
+  "description": "2D zero-gravity space station co-op puzzle game where you move the maze around the astronaut.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "game",
+    "phaser3",
+    "matterjs",
+    "coop",
+    "puzzle"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.5"
+  }
+}
