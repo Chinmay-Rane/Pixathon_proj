@@ -41,7 +41,9 @@ export class GameScene extends Phaser.Scene {
     this.driftVx = 0;
     this.driftVy = 0;
 
-    // Phase 2 Inventory & Stage Progression
+    // Multi-Part Key Ciphers & Stage Progression
+    this.collectedKeys = 0;
+    this.totalKeys = this.level.keycards.length;
     this.hasKey = false;
     this.unlockedDoors = new Set();
     this.sealedBreaches = new Set();
@@ -114,7 +116,7 @@ export class GameScene extends Phaser.Scene {
       });
       this.hud.setLevelName(this.level.name);
       this.hud.updateOxygen(this.gameState.oxygen, CONFIG.oxygen.max);
-      this.hud.updateKeycardStatus(false);
+      this.hud.updateKeyParts(this.collectedKeys, this.totalKeys);
     }
   }
 
@@ -400,6 +402,7 @@ export class GameScene extends Phaser.Scene {
         x: wx,
         y: wy,
         unlocked: false,
+        warnedTime: 0,
       });
     }
 
@@ -905,7 +908,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Checks for Keycard collection on touch.
+   * Checks for Keycard Cipher collection on touch.
    */
   updateKeycardCollection() {
     for (const k of this.keycardSprites) {
@@ -914,7 +917,8 @@ export class GameScene extends Phaser.Scene {
 
       if (dist < CONFIG.items.keyPickupRadius) {
         k.collected = true;
-        this.hasKey = true;
+        this.collectedKeys++;
+        const remaining = this.totalKeys - this.collectedKeys;
 
         this.tweens.add({
           targets: k.sprite,
@@ -925,23 +929,51 @@ export class GameScene extends Phaser.Scene {
         });
 
         this.thrusterParticles.emitParticleAt(k.x, k.y, 8);
+
         if (this.hud) {
-          this.hud.updateKeycardStatus(true);
-          this.hud.showAnnouncement('SECURITY KEY ACQUIRED // DOORS UNLOCKED');
+          this.hud.updateKeyParts(this.collectedKeys, this.totalKeys);
+          if (remaining > 0) {
+            this.hud.showAnnouncement(`CIPHER MODULE [${this.collectedKeys}/${this.totalKeys}] DECRYPTED (${remaining} MORE REQUIRED)`);
+          } else {
+            this.hud.showAnnouncement(`ALL ${this.totalKeys} CIPHERS ACQUIRED // BLAST BULKHEAD UNLOCKED`);
+          }
+        }
+
+        // When all required keys in sector are gathered, turn blast doors green
+        if (this.collectedKeys >= this.totalKeys) {
+          for (const d of this.doorEntities) {
+            if (!d.unlocked && d.image) {
+              d.image.setTexture('blast_door_unlocked');
+            }
+          }
         }
       }
     }
   }
 
   /**
-   * Unlocks Blast Doors when the astronaut approaches with the Security Keycard.
+   * Unlocks Blast Doors when the astronaut approaches with ALL Security Key Ciphers.
    */
   updateBlastDoors() {
+    const now = Date.now();
     for (const d of this.doorEntities) {
       if (d.unlocked) continue;
       const dist = Math.hypot(this.astronaut.x - d.x, this.astronaut.y - d.y);
 
-      if (this.hasKey && dist < CONFIG.items.doorUnlockDistance) {
+      // Warning when attempting to enter without all key ciphers
+      if (dist < CONFIG.items.doorUnlockDistance && this.collectedKeys < this.totalKeys) {
+        if (now - d.warnedTime > 2500) {
+          d.warnedTime = now;
+          const remaining = this.totalKeys - this.collectedKeys;
+          if (this.hud) {
+            this.hud.showAnnouncement(`ACCESS DENIED // ASSEMBLE ALL ${this.totalKeys} KEY CIPHERS (${remaining} REMAINING)`, true);
+          }
+          this.cameras.main.shake(15, 0.001);
+        }
+      }
+
+      // Unlock when all keys are acquired
+      if (this.collectedKeys >= this.totalKeys && dist < CONFIG.items.doorUnlockDistance) {
         d.unlocked = true;
 
         // Slide open door animation
@@ -959,7 +991,7 @@ export class GameScene extends Phaser.Scene {
 
         this.thrusterParticles.emitParticleAt(d.x, d.y, 6);
         if (this.hud) {
-          this.hud.showAnnouncement('STAGE ACCESS GRANTED');
+          this.hud.showAnnouncement('SECURITY BULKHEAD RETRACTED // PROCEED TO DOCK');
         }
       }
     }

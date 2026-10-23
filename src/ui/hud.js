@@ -175,19 +175,37 @@ export class HUD {
     }
   }
 
-  updateKeycardStatus(hasKey) {
-    if (hasKey) {
+  updateKeyParts(collected, total) {
+    if (!this.el.keyStatus) return;
+
+    if (total <= 0) {
       this.el.keyDot.classList.add('key-acquired');
-      this.el.keyStatus.textContent = 'ACQUIRED';
+      this.el.keyStatus.textContent = 'NO LOCK';
       this.el.keyStatus.style.color = '#00ff88';
-      this.el.keyDetail.textContent = 'DOORS UNLOCKED';
+      this.el.keyDetail.textContent = 'SECTOR OPEN';
+      this.el.keyDetail.style.color = '#33ffaa';
+      return;
+    }
+
+    if (collected >= total) {
+      this.el.keyDot.classList.add('key-acquired');
+      this.el.keyStatus.textContent = `${collected}/${total} READY`;
+      this.el.keyStatus.style.color = '#00ff88';
+      this.el.keyDetail.textContent = 'ALL CIPHERS ASSEMBLED';
       this.el.keyDetail.style.color = '#33ffaa';
     } else {
       this.el.keyDot.classList.remove('key-acquired');
-      this.el.keyStatus.textContent = 'REQUIRED';
-      this.el.keyStatus.style.color = '#ffaa00';
-      this.el.keyDetail.textContent = 'DOORS LOCKED';
+      this.el.keyStatus.textContent = `${collected}/${total} CIPHERS`;
+      this.el.keyStatus.style.color = collected > 0 ? '#00e5ff' : '#ffaa00';
+      const remaining = total - collected;
+      this.el.keyDetail.textContent = `${remaining} MORE TO UNLOCK`;
       this.el.keyDetail.style.color = '#7da0c5';
+    }
+  }
+
+  updateKeycardStatus(hasKey) {
+    if (typeof hasKey === 'boolean') {
+      this.updateKeyParts(hasKey ? 1 : 0, 1);
     }
   }
 

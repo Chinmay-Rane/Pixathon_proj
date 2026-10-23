@@ -35,6 +35,7 @@ export class BootScene extends Phaser.Scene {
     this.createCrateTexture();
     this.createKeycardTexture();
     this.createBlastDoorTexture();
+    this.createBlastDoorUnlockedTexture();
     this.createBreachTexture();
     this.createFireNozzleTexture();
     this.createOxygenCanisterTexture();
@@ -464,6 +465,49 @@ export class BootScene extends Phaser.Scene {
 
     // Center Security Lock Indicator
     ctx.fillStyle = '#ff3344';
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    canvas.refresh();
+  }
+
+  /**
+   * Generates unlocked blast door texture ('X') with emerald green LED strip (76x30).
+   */
+  createBlastDoorUnlockedTexture() {
+    const w = CONFIG.visuals.tileSize; // 76px
+    const h = 30;
+    const canvas = this.textures.createCanvas('blast_door_unlocked', w, h);
+    const ctx = canvas.context;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Heavy Titanium Barrier Frame
+    const doorGrad = ctx.createLinearGradient(0, 0, 0, h);
+    doorGrad.addColorStop(0, '#243b35');
+    doorGrad.addColorStop(0.5, '#12241f');
+    doorGrad.addColorStop(1, '#0a1612');
+
+    ctx.fillStyle = doorGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Interlocking Blast Teeth
+    ctx.fillStyle = '#06120e';
+    for (let x = 6; x < w - 6; x += 12) {
+      ctx.fillRect(x, h / 2 - 3, 6, 6);
+    }
+
+    // Emerald Unlocked Warning LED Strip
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#00ff88';
+    ctx.fillRect(4, 3, w - 8, 3);
+    ctx.fillRect(4, h - 6, w - 8, 3);
+    ctx.shadowBlur = 0;
+
+    // Center Security Lock Indicator (Unlocked Green)
+    ctx.fillStyle = '#00ff88';
     ctx.beginPath();
     ctx.arc(w / 2, h / 2, 5, 0, Math.PI * 2);
     ctx.fill();
